@@ -1155,7 +1155,7 @@
     </div>
 
     <script>
-        // Initialize maps
+    // Initialize maps
 let map, routesMap;
 let waterLevelChart, pressureTempChart, tankDistributionChart;
 const markers = new Map();
@@ -1163,8 +1163,9 @@ const routeMarkers = new Map();
 const routeLines = [];
 let currentFilter = 'all';
 let currentDeviceId = null;
+let historyDateFilter = { start: null, end: null };
 
-// Device data with history
+// Device data with enhanced history
 let devices = [
     {
         id: 'TANK-001',
@@ -1184,9 +1185,14 @@ let devices = [
         material: 'Stainless Steel',
         notes: 'Primary storage tank',
         history: [
-            { type: 'fill', amount: 1500, date: '2024-11-08T10:30:00', notes: 'Regular refill' },
-            { type: 'drain', amount: 800, date: '2024-11-07T14:20:00', notes: 'Supply to distribution' },
-            { type: 'fill', amount: 2000, date: '2024-11-06T09:15:00', notes: 'Morning refill' }
+            { type: 'fill', amount: 1500, waterLevelBefore: 2000, waterLevelAfter: 3500, date: '2024-11-08T10:30:00', notes: 'Regular refill' },
+            { type: 'drain', amount: 800, waterLevelBefore: 2800, waterLevelAfter: 2000, date: '2024-11-07T14:20:00', notes: 'Supply to distribution' },
+            { type: 'fill', amount: 2000, waterLevelBefore: 800, waterLevelAfter: 2800, date: '2024-11-06T09:15:00', notes: 'Morning refill' },
+            { type: 'drain', amount: 500, waterLevelBefore: 1300, waterLevelAfter: 800, date: '2024-11-05T16:45:00', notes: 'Scheduled drain' },
+            { type: 'fill', amount: 1300, waterLevelBefore: 0, waterLevelAfter: 1300, date: '2024-11-04T08:00:00', notes: 'Initial fill' },
+            { type: 'fill', amount: 1800, waterLevelBefore: 1500, waterLevelAfter: 3300, date: '2024-11-03T11:20:00', notes: 'Maintenance refill' },
+            { type: 'drain', amount: 1200, waterLevelBefore: 2700, waterLevelAfter: 1500, date: '2024-11-02T13:30:00', notes: 'Distribution supply' },
+            { type: 'fill', amount: 2200, waterLevelBefore: 500, waterLevelAfter: 2700, date: '2024-11-01T07:15:00', notes: 'Monthly refill' }
         ]
     },
     {
@@ -1225,8 +1231,10 @@ let devices = [
         material: 'Stainless Steel',
         notes: 'Scheduled maintenance',
         history: [
-            { type: 'drain', amount: 500, date: '2024-11-05T16:00:00', notes: 'Maintenance preparation' },
-            { type: 'fill', amount: 1000, date: '2024-11-04T11:30:00', notes: 'Partial refill' }
+            { type: 'drain', amount: 500, waterLevelBefore: 1700, waterLevelAfter: 1200, date: '2024-11-05T16:00:00', notes: 'Maintenance preparation' },
+            { type: 'fill', amount: 1000, waterLevelBefore: 700, waterLevelAfter: 1700, date: '2024-11-04T11:30:00', notes: 'Partial refill' },
+            { type: 'drain', amount: 300, waterLevelBefore: 1000, waterLevelAfter: 700, date: '2024-11-03T09:45:00', notes: 'Regular drain' },
+            { type: 'fill', amount: 900, waterLevelBefore: 100, waterLevelAfter: 1000, date: '2024-11-02T14:20:00', notes: 'Emergency refill' }
         ]
     }
 ];
@@ -1328,7 +1336,7 @@ function createMarker(device) {
 
 // Calculate distance between two points (Haversine formula)
 function calculateDistance(lat1, lon1, lat2, lon2) {
-    const R = 6371; // Earth's radius in km
+    const R = 6371;
     const dLat = (lat2 - lat1) * Math.PI / 180;
     const dLon = (lon2 - lon1) * Math.PI / 180;
     const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
@@ -1513,7 +1521,6 @@ function showDeviceDetails(device) {
             </div>
         </div>`;
 
-    // Location Information
     detailsHTML += `
         <div class="detail-card">
             <div class="section-title">📍 Location</div>
@@ -1531,7 +1538,6 @@ function showDeviceDetails(device) {
             </div>
         </div>`;
 
-    // Tank-specific details
     if (device.type === 'tank') {
         const waterPercent = (device.waterLevel / device.capacity * 100).toFixed(1);
         const waterKL = (device.waterLevel / 1000).toFixed(1);
@@ -1564,7 +1570,6 @@ function showDeviceDetails(device) {
             </div>`;
     }
 
-    // Pipeline-specific details
     if (device.type === 'pipeline') {
         detailsHTML += `
             <div class="detail-card">
@@ -1592,7 +1597,6 @@ function showDeviceDetails(device) {
             </div>`;
     }
 
-    // Operational data
     detailsHTML += `
         <div class="detail-card">
             <div class="section-title">📊 Operational Data</div>
@@ -1610,7 +1614,6 @@ function showDeviceDetails(device) {
             </div>
         </div>`;
 
-    // Notes
     if (device.notes) {
         detailsHTML += `
             <div class="detail-card">
@@ -1619,7 +1622,6 @@ function showDeviceDetails(device) {
             </div>`;
     }
 
-    // Action buttons
     detailsHTML += `
         <div class="action-buttons">
             ${device.type === 'tank' ? `
@@ -1636,7 +1638,7 @@ function showDeviceDetails(device) {
     map.setView([device.latitude, device.longitude], 12);
 }
 
-// Show device history
+// ENHANCED: Show device history with spreadsheet format and date filtering
 function showDeviceHistory(deviceId) {
     const device = devices.find(d => d.id === deviceId);
     if (!device || !device.history || device.history.length === 0) {
@@ -1650,32 +1652,234 @@ function showDeviceHistory(deviceId) {
 
     let historyHTML = '<h3 class="panel-header">Transaction History</h3>';
     
-    const sortedHistory = [...device.history].sort((a, b) => new Date(b.date) - new Date(a.date));
+    // Date filter controls
+    historyHTML += `
+        <div style="background: #f9fafb; padding: 1rem; border-radius: 0.5rem; margin-bottom: 1rem;">
+            <div style="font-weight: 600; margin-bottom: 0.75rem; color: var(--text-color);">📅 Filter by Date Range</div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-bottom: 0.75rem;">
+                <div>
+                    <label style="font-size: 0.75rem; color: #6b7280; display: block; margin-bottom: 0.25rem;">Start Date</label>
+                    <input type="date" id="historyStartDate" 
+                        style="width: 100%; padding: 0.5rem; border: 1px solid #e5e7eb; border-radius: 0.375rem; font-size: 0.875rem;"
+                        onchange="applyHistoryDateFilter('${deviceId}')">
+                </div>
+                <div>
+                    <label style="font-size: 0.75rem; color: #6b7280; display: block; margin-bottom: 0.25rem;">End Date</label>
+                    <input type="date" id="historyEndDate" 
+                        style="width: 100%; padding: 0.5rem; border: 1px solid #e5e7eb; border-radius: 0.375rem; font-size: 0.875rem;"
+                        onchange="applyHistoryDateFilter('${deviceId}')">
+                </div>
+            </div>
+            <div style="display: flex; gap: 0.5rem;">
+                <button onclick="resetHistoryDateFilter('${deviceId}')" 
+                    style="padding: 0.5rem 1rem; background: #6b7280; color: white; border: none; border-radius: 0.375rem; font-size: 0.75rem; cursor: pointer; flex: 1;">
+                    Reset Filter
+                </button>
+                <button onclick="exportHistoryToCSV('${deviceId}')" 
+                    style="padding: 0.5rem 1rem; background: var(--success-color); color: white; border: none; border-radius: 0.375rem; font-size: 0.75rem; cursor: pointer; flex: 1;">
+                    📥 Export to CSV
+                </button>
+            </div>
+        </div>
+    `;
     
-    sortedHistory.forEach(entry => {
-        const date = new Date(entry.date);
-        const formattedDate = date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
-        const formattedTime = date.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
-        const amountKL = (entry.amount / 1000).toFixed(1);
-        
+    // Filter history based on date range
+    let filteredHistory = [...device.history];
+    if (historyDateFilter.start) {
+        const startDate = new Date(historyDateFilter.start);
+        filteredHistory = filteredHistory.filter(entry => new Date(entry.date) >= startDate);
+    }
+    if (historyDateFilter.end) {
+        const endDate = new Date(historyDateFilter.end);
+        endDate.setHours(23, 59, 59, 999);
+        filteredHistory = filteredHistory.filter(entry => new Date(entry.date) <= endDate);
+    }
+    
+    // Sort by date descending
+    filteredHistory.sort((a, b) => new Date(b.date) - new Date(a.date));
+    
+    // Spreadsheet-style table
+    historyHTML += `
+        <div style="overflow-x: auto; background: white; border-radius: 0.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+            <table style="width: 100%; border-collapse: collapse; font-size: 0.875rem;">
+                <thead>
+                    <tr style="background: linear-gradient(to bottom, #f9fafb, #f3f4f6); border-bottom: 2px solid #e5e7eb;">
+                        <th style="padding: 0.75rem; text-align: left; font-weight: 600; color: #374151; white-space: nowrap;">Type</th>
+                        <th style="padding: 0.75rem; text-align: right; font-weight: 600; color: #374151; white-space: nowrap;">Before (L)</th>
+                        <th style="padding: 0.75rem; text-align: right; font-weight: 600; color: #374151; white-space: nowrap;">Before (KL)</th>
+                        <th style="padding: 0.75rem; text-align: right; font-weight: 600; color: #374151; white-space: nowrap;">After (L)</th>
+                        <th style="padding: 0.75rem; text-align: right; font-weight: 600; color: #374151; white-space: nowrap;">After (KL)</th>
+                        <th style="padding: 0.75rem; text-align: right; font-weight: 600; color: #374151; white-space: nowrap;">Change (KL)</th>
+                        <th style="padding: 0.75rem; text-align: center; font-weight: 600; color: #374151; white-space: nowrap;">Date</th>
+                        <th style="padding: 0.75rem; text-align: center; font-weight: 600; color: #374151; white-space: nowrap;">Time</th>
+                        <th style="padding: 0.75rem; text-align: left; font-weight: 600; color: #374151;">Notes</th>
+                    </tr>
+                </thead>
+                <tbody>
+    `;
+    
+    if (filteredHistory.length === 0) {
         historyHTML += `
-            <div class="history-entry">
-                <div class="history-header">
-                    <span class="history-type ${entry.type === 'fill' ? 'history-fill' : 'history-drain'}">
-                        ${entry.type === 'fill' ? '▲ FILL' : '▼ DRAIN'}
-                    </span>
-                    <span class="history-time">${formattedDate} ${formattedTime}</span>
+            <tr>
+                <td colspan="9" style="padding: 2rem; text-align: center; color: #9ca3af;">No records found for selected date range</td>
+            </tr>
+        `;
+    } else {
+        filteredHistory.forEach((entry, index) => {
+            const date = new Date(entry.date);
+            const formattedDate = date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+            const formattedTime = date.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            
+            const beforeKL = (entry.waterLevelBefore / 1000).toFixed(2);
+            const afterKL = (entry.waterLevelAfter / 1000).toFixed(2);
+            const changeKL = (entry.amount / 1000).toFixed(2);
+            
+            const rowBg = index % 2 === 0 ? '#ffffff' : '#f9fafb';
+            const typeColor = entry.type === 'fill' ? '#059669' : '#dc2626';
+            const typeBg = entry.type === 'fill' ? '#dcfce7' : '#fee2e2';
+            const typeIcon = entry.type === 'fill' ? '▲' : '▼';
+            
+            historyHTML += `
+                <tr style="background: ${rowBg}; border-bottom: 1px solid #e5e7eb; transition: background 0.2s;">
+                    <td style="padding: 0.75rem;">
+                        <span style="background: ${typeBg}; color: ${typeColor}; padding: 0.25rem 0.5rem; border-radius: 0.25rem; font-weight: 600; font-size: 0.75rem; text-transform: uppercase;">
+                            ${typeIcon} ${entry.type}
+                        </span>
+                    </td>
+                    <td style="padding: 0.75rem; text-align: right; font-family: 'Courier New', monospace; color: #6b7280;">${entry.waterLevelBefore.toLocaleString()}</td>
+                    <td style="padding: 0.75rem; text-align: right; font-family: 'Courier New', monospace; font-weight: 600;">${beforeKL}</td>
+                    <td style="padding: 0.75rem; text-align: right; font-family: 'Courier New', monospace; color: #6b7280;">${entry.waterLevelAfter.toLocaleString()}</td>
+                    <td style="padding: 0.75rem; text-align: right; font-family: 'Courier New', monospace; font-weight: 600;">${afterKL}</td>
+                    <td style="padding: 0.75rem; text-align: right; font-family: 'Courier New', monospace; font-weight: 700; color: ${typeColor};">
+                        ${entry.type === 'fill' ? '+' : '-'}${changeKL}
+                    </td>
+                    <td style="padding: 0.75rem; text-align: center; white-space: nowrap;">${formattedDate}</td>
+                    <td style="padding: 0.75rem; text-align: center; font-family: 'Courier New', monospace; white-space: nowrap;">${formattedTime}</td>
+                    <td style="padding: 0.75rem; color: #6b7280; font-size: 0.8rem;">${entry.notes || '-'}</td>
+                </tr>
+            `;
+        });
+    }
+    
+    historyHTML += `
+                </tbody>
+            </table>
+        </div>
+    `;
+    
+    // Summary statistics
+    const totalFill = filteredHistory.filter(e => e.type === 'fill').reduce((sum, e) => sum + e.amount, 0);
+    const totalDrain = filteredHistory.filter(e => e.type === 'drain').reduce((sum, e) => sum + e.amount, 0);
+    const netChange = totalFill - totalDrain;
+    
+    historyHTML += `
+        <div style="margin-top: 1rem; padding: 1rem; background: #f0f9ff; border-radius: 0.5rem; border-left: 4px solid #0ea5e9;">
+            <div style="font-weight: 600; margin-bottom: 0.5rem; color: #0369a1;">📊 Summary Statistics</div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.5rem; font-size: 0.875rem;">
+                <div>
+                    <div style="color: #6b7280; font-size: 0.75rem;">Total Fill</div>
+                    <div style="font-weight: 700; color: #059669;">+${(totalFill/1000).toFixed(2)} KL</div>
                 </div>
-                <div class="history-content">
-                    <div style="font-weight: 600; font-size: 1.125rem; margin-bottom: 0.25rem;">
-                        ${entry.type === 'fill' ? '+' : '-'}${amountKL} KL
+                <div>
+                    <div style="color: #6b7280; font-size: 0.75rem;">Total Drain</div>
+                    <div style="font-weight: 700; color: #dc2626;">-${(totalDrain/1000).toFixed(2)} KL</div>
+                </div>
+                <div>
+                    <div style="color: #6b7280; font-size: 0.75rem;">Net Change</div>
+                    <div style="font-weight: 700; color: ${netChange >= 0 ? '#059669' : '#dc2626'};">
+                        ${netChange >= 0 ? '+' : ''}${(netChange/1000).toFixed(2)} KL
                     </div>
-                    ${entry.notes ? `<div style="color: #6b7280; font-size: 0.875rem;">${entry.notes}</div>` : ''}
                 </div>
-            </div>`;
-    });
+            </div>
+            <div style="margin-top: 0.5rem; font-size: 0.75rem; color: #6b7280;">
+                Showing ${filteredHistory.length} of ${device.history.length} total records
+            </div>
+        </div>
+    `;
 
     document.getElementById('deviceHistory').innerHTML = historyHTML;
+    
+    // Set date inputs if filters are active
+    if (historyDateFilter.start) {
+        document.getElementById('historyStartDate').value = historyDateFilter.start;
+    }
+    if (historyDateFilter.end) {
+        document.getElementById('historyEndDate').value = historyDateFilter.end;
+    }
+}
+
+// Apply history date filter
+function applyHistoryDateFilter(deviceId) {
+    const startDate = document.getElementById('historyStartDate').value;
+    const endDate = document.getElementById('historyEndDate').value;
+    
+    historyDateFilter.start = startDate || null;
+    historyDateFilter.end = endDate || null;
+    
+    showDeviceHistory(deviceId);
+    showToast('Date filter applied', 'success');
+}
+
+// Reset history date filter
+function resetHistoryDateFilter(deviceId) {
+    historyDateFilter.start = null;
+    historyDateFilter.end = null;
+    document.getElementById('historyStartDate').value = '';
+    document.getElementById('historyEndDate').value = '';
+    showDeviceHistory(deviceId);
+    showToast('Filter reset', 'success');
+}
+
+// Export history to CSV
+function exportHistoryToCSV(deviceId) {
+    const device = devices.find(d => d.id === deviceId);
+    if (!device || !device.history || device.history.length === 0) {
+        showToast('No history data to export', 'error');
+        return;
+    }
+    
+    // Filter history based on date range
+    let filteredHistory = [...device.history];
+    if (historyDateFilter.start) {
+        const startDate = new Date(historyDateFilter.start);
+        filteredHistory = filteredHistory.filter(entry => new Date(entry.date) >= startDate);
+    }
+    if (historyDateFilter.end) {
+        const endDate = new Date(historyDateFilter.end);
+        endDate.setHours(23, 59, 59, 999);
+        filteredHistory = filteredHistory.filter(entry => new Date(entry.date) <= endDate);
+    }
+    
+    // Sort by date descending
+    filteredHistory.sort((a, b) => new Date(b.date) - new Date(a.date));
+    
+    // Create CSV content
+    let csv = 'Device ID,Device Name,Transaction Type,Water Level Before (Liters),Water Level Before (KL),Water Level After (Liters),Water Level After (KL),Change Amount (KL),Date,Time,Notes\n';
+    
+    filteredHistory.forEach(entry => {
+        const date = new Date(entry.date);
+        const formattedDate = date.toLocaleDateString('en-IN');
+        const formattedTime = date.toLocaleTimeString('en-IN');
+        
+        const beforeKL = (entry.waterLevelBefore / 1000).toFixed(2);
+        const afterKL = (entry.waterLevelAfter / 1000).toFixed(2);
+        const changeKL = (entry.amount / 1000).toFixed(2);
+        
+        csv += `"${device.id}","${device.name}","${entry.type.toUpperCase()}",${entry.waterLevelBefore},${beforeKL},${entry.waterLevelAfter},${afterKL},${changeKL},"${formattedDate}","${formattedTime}","${entry.notes || ''}"\n`;
+    });
+    
+    // Download CSV
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `${device.id}_history_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    showToast('History exported to CSV', 'success');
 }
 
 // Show device statistics
@@ -1690,7 +1894,6 @@ function showDeviceStats(deviceId) {
         const waterKL = (device.waterLevel / 1000).toFixed(1);
         const capacityKL = (device.capacity / 1000).toFixed(1);
         
-        // Calculate average from history
         let totalFilled = 0;
         let totalDrained = 0;
         let fillCount = 0;
@@ -2124,7 +2327,7 @@ function closeAddWaterModal() {
     document.getElementById('waterNotes').value = '';
 }
 
-// Handle add water
+// Handle add water with enhanced history tracking
 function handleAddWater(event) {
     event.preventDefault();
     
@@ -2136,6 +2339,7 @@ function handleAddWater(event) {
     if (!device || device.type !== 'tank') return;
 
     const amountLiters = amountKL * 1000;
+    const waterLevelBefore = device.waterLevel;
     const newLevel = Math.min(device.capacity, device.waterLevel + amountLiters);
     const actualAdded = newLevel - device.waterLevel;
 
@@ -2146,6 +2350,8 @@ function handleAddWater(event) {
     device.history.unshift({
         type: 'fill',
         amount: actualAdded,
+        waterLevelBefore: waterLevelBefore,
+        waterLevelAfter: newLevel,
         date: new Date().toISOString(),
         notes: notes || 'Water added via interface'
     });
@@ -2197,11 +2403,24 @@ function handleAddDevice(event) {
     };
 
     if (type === 'tank') {
-        newDevice.capacity = parseInt(document.getElementById('tankCapacity').value);
-        newDevice.waterLevel = parseInt(document.getElementById('tankWaterLevel').value);
+        const capacity = parseInt(document.getElementById('tankCapacity').value);
+        const waterLevel = parseInt(document.getElementById('tankWaterLevel').value);
+        
+        newDevice.capacity = capacity;
+        newDevice.waterLevel = waterLevel;
         newDevice.diameter = parseFloat(document.getElementById('tankDiameter').value) || 0;
         newDevice.height = parseFloat(document.getElementById('tankHeight').value) || 0;
         newDevice.material = 'Stainless Steel';
+        
+        // Add initial history entry
+        newDevice.history.push({
+            type: 'fill',
+            amount: waterLevel,
+            waterLevelBefore: 0,
+            waterLevelAfter: waterLevel,
+            date: new Date().toISOString(),
+            notes: 'Initial tank setup'
+        });
     } else if (type === 'pipeline') {
         newDevice.pipelineName = document.getElementById('pipelineName').value;
         newDevice.length = parseFloat(document.getElementById('pipelineLength').value) || 0;
@@ -2225,7 +2444,7 @@ function handleAddDevice(event) {
     populateRouteSelects();
 }
 
-// Handle editing device
+// Handle editing device with enhanced history tracking
 function handleEditDevice(event) {
     event.preventDefault();
     
@@ -2246,18 +2465,22 @@ function handleEditDevice(event) {
 
         if (device.type === 'tank') {
             device.capacity = parseInt(document.getElementById('editTankCapacity').value);
-            device.waterLevel = parseInt(document.getElementById('editTankWaterLevel').value);
+            const newWaterLevel = parseInt(document.getElementById('editTankWaterLevel').value);
             
-            if (oldWaterLevel !== device.waterLevel) {
-                const diff = device.waterLevel - oldWaterLevel;
+            if (oldWaterLevel !== newWaterLevel) {
+                const diff = newWaterLevel - oldWaterLevel;
                 if (!device.history) device.history = [];
                 device.history.unshift({
                     type: diff > 0 ? 'fill' : 'drain',
                     amount: Math.abs(diff),
+                    waterLevelBefore: oldWaterLevel,
+                    waterLevelAfter: newWaterLevel,
                     date: new Date().toISOString(),
                     notes: 'Manual adjustment via edit'
                 });
             }
+            
+            device.waterLevel = newWaterLevel;
         } else if (device.type === 'pipeline') {
             device.pipelineName = document.getElementById('editPipelineName').value;
             device.length = parseFloat(document.getElementById('editPipelineLength').value);
@@ -2406,7 +2629,22 @@ function refreshDevices() {
     devices.forEach(device => {
         if (device.type === 'tank' && Math.random() > 0.5) {
             const change = (Math.random() * 200 - 100);
-            device.waterLevel = Math.max(0, Math.min(device.capacity, device.waterLevel + change));
+            const oldLevel = device.waterLevel;
+            const newLevel = Math.max(0, Math.min(device.capacity, device.waterLevel + change));
+            
+            if (Math.abs(newLevel - oldLevel) > 10) {
+                if (!device.history) device.history = [];
+                device.history.unshift({
+                    type: change > 0 ? 'fill' : 'drain',
+                    amount: Math.abs(newLevel - oldLevel),
+                    waterLevelBefore: oldLevel,
+                    waterLevelAfter: newLevel,
+                    date: new Date().toISOString(),
+                    notes: 'Automatic update'
+                });
+            }
+            
+            device.waterLevel = newLevel;
         }
         
         device.pressure = Math.max(0, device.pressure + (Math.random() * 0.4 - 0.2));
@@ -2558,7 +2796,6 @@ window.onload = function() {
         }
     }, 5000);
 };
-
 </script>
 </body>
 </html>
