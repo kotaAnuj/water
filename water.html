@@ -1,0 +1,2564 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pipeline Management System - Enhanced</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.0/chart.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        :root {
+            --primary-color: #2563eb;
+            --secondary-color: #1e40af;
+            --background-color: #f3f4f6;
+            --text-color: #1f2937;
+            --error-color: #dc2626;
+            --success-color: #059669;
+            --warning-color: #eab308;
+            --sidebar-width: 260px;
+            --panel-width: 380px;
+        }
+
+        body {
+            background-color: var(--background-color);
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        .dashboard {
+            display: grid;
+            grid-template-columns: var(--sidebar-width) 1fr var(--panel-width);
+            height: 100vh;
+        }
+
+        .sidebar {
+            background: linear-gradient(180deg, #1e40af 0%, #1e3a8a 100%);
+            color: white;
+            padding: 1.5rem;
+            overflow-y: auto;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid rgba(255,255,255,0.2);
+        }
+
+        .nav-section {
+            margin-bottom: 1.5rem;
+        }
+
+        .nav-section-title {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            opacity: 0.7;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+        }
+
+        .nav-item {
+            padding: 0.875rem 1rem;
+            margin: 0.25rem 0;
+            cursor: pointer;
+            border-radius: 0.5rem;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .nav-item:hover {
+            background-color: rgba(255,255,255,0.1);
+        }
+
+        .nav-item.active {
+            background-color: rgba(255,255,255,0.2);
+            font-weight: 600;
+        }
+
+        .nav-icon {
+            width: 20px;
+            height: 20px;
+        }
+
+        .main-content {
+            padding: 1.5rem;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            background: white;
+            padding: 1rem 1.5rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .header-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--text-color);
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 0.75rem;
+        }
+
+        #map-container {
+            height: calc(100vh - 180px);
+            border-radius: 0.5rem;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .details-panel {
+            background-color: white;
+            padding: 1.5rem;
+            overflow-y: auto;
+            box-shadow: -2px 0 10px rgba(0,0,0,0.1);
+        }
+
+        .panel-header {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid var(--background-color);
+        }
+
+        .btn {
+            padding: 0.625rem 1.25rem;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            font-size: 0.875rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn:hover {
+            background-color: var(--secondary-color);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(37, 99, 235, 0.3);
+        }
+
+        .btn-secondary {
+            background-color: #6b7280;
+        }
+
+        .btn-secondary:hover {
+            background-color: #4b5563;
+        }
+
+        .btn-danger {
+            background-color: var(--error-color);
+        }
+
+        .btn-danger:hover {
+            background-color: #b91c1c;
+        }
+
+        .btn-success {
+            background-color: var(--success-color);
+        }
+
+        .btn-success:hover {
+            background-color: #047857;
+        }
+
+        .device-details {
+            margin-top: 1rem;
+        }
+
+        .detail-card {
+            background: var(--background-color);
+            padding: 1rem;
+            border-radius: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .detail-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .detail-item:last-child {
+            border-bottom: none;
+        }
+
+        .detail-label {
+            font-weight: 500;
+            color: #6b7280;
+            font-size: 0.875rem;
+        }
+
+        .detail-value {
+            font-weight: 600;
+            color: var(--text-color);
+            text-align: right;
+        }
+
+        .status-indicator {
+            padding: 0.375rem 0.75rem;
+            border-radius: 0.375rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .status-active {
+            background-color: #dcfce7;
+            color: #166534;
+        }
+
+        .status-offline {
+            background-color: #fee2e2;
+            color: #991b1b;
+        }
+
+        .status-maintenance {
+            background-color: #fef3c7;
+            color: #92400e;
+        }
+
+        .search-container {
+            position: relative;
+            margin-bottom: 1rem;
+        }
+
+        .search-bar {
+            width: 100%;
+            padding: 0.875rem 1rem 0.875rem 2.75rem;
+            border: 1px solid #e5e7eb;
+            border-radius: 0.5rem;
+            font-size: 0.875rem;
+            transition: all 0.3s ease;
+        }
+
+        .search-bar:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #9ca3af;
+        }
+
+        .filter-bar {
+            display: flex;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .filter-chip {
+            padding: 0.5rem 1rem;
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            font-size: 0.875rem;
+            transition: all 0.3s ease;
+        }
+
+        .filter-chip:hover {
+            border-color: var(--primary-color);
+        }
+
+        .filter-chip.active {
+            background: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1100;
+            backdrop-filter: blur(4px);
+        }
+
+        .modal.show {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 2rem;
+            border-radius: 0.75rem;
+            width: 90%;
+            max-width: 650px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);
+            animation: modalSlideIn 0.3s ease;
+        }
+
+        @keyframes modalSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .modal-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .close-btn {
+            cursor: pointer;
+            font-size: 1.5rem;
+            color: #9ca3af;
+            background: none;
+            border: none;
+            padding: 0.25rem;
+            line-height: 1;
+            transition: color 0.3s ease;
+        }
+
+        .close-btn:hover {
+            color: var(--text-color);
+        }
+
+        .form-group {
+            margin-bottom: 1.25rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: var(--text-color);
+            font-size: 0.875rem;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #e5e7eb;
+            border-radius: 0.5rem;
+            font-size: 0.875rem;
+            transition: all 0.3s ease;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            background: white;
+            padding: 1rem 1.5rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
+            display: none;
+            align-items: center;
+            gap: 1rem;
+            z-index: 1200;
+            animation: toastSlideIn 0.3s ease;
+        }
+
+        @keyframes toastSlideIn {
+            from {
+                opacity: 0;
+                transform: translateX(100%);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .toast.show {
+            display: flex;
+        }
+
+        .toast.success {
+            border-left: 4px solid var(--success-color);
+        }
+
+        .toast.error {
+            border-left: 4px solid var(--error-color);
+        }
+
+        .toast.warning {
+            border-left: 4px solid var(--warning-color);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: #9ca3af;
+        }
+
+        .empty-state-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.625rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            border-radius: 0.25rem;
+        }
+
+        .badge-primary {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+
+        .badge-danger {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .action-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+
+        .water-level-indicator {
+            position: relative;
+            height: 150px;
+            background: linear-gradient(to bottom, #f3f4f6 0%, #e5e7eb 100%);
+            border-radius: 0.5rem;
+            overflow: hidden;
+            margin: 1rem 0;
+            border: 2px solid #d1d5db;
+        }
+
+        .water-level-fill {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(to top, #0ea5e9 0%, #38bdf8 100%);
+            transition: height 0.5s ease;
+        }
+
+        .water-level-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--text-color);
+            z-index: 1;
+            text-shadow: 0 2px 4px rgba(255,255,255,0.8);
+        }
+
+        .coordinate-display {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem;
+            background: #f9fafb;
+            border-radius: 0.375rem;
+            font-family: 'Courier New', monospace;
+            font-size: 0.8rem;
+        }
+
+        .location-section {
+            background: #f0f9ff;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            border-left: 4px solid #0ea5e9;
+            margin-bottom: 1rem;
+        }
+
+        .section-title {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: #0369a1;
+            margin-bottom: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 1.25rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .stat-icon {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-value {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: var(--text-color);
+            margin-bottom: 0.25rem;
+        }
+
+        .stat-label {
+            font-size: 0.875rem;
+            color: #6b7280;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .chart-container {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            margin-bottom: 1.5rem;
+        }
+
+        .chart-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: var(--text-color);
+        }
+
+        .history-entry {
+            background: white;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            border-left: 4px solid var(--primary-color);
+            margin-bottom: 0.75rem;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        }
+
+        .history-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .history-time {
+            font-size: 0.75rem;
+            color: #6b7280;
+            font-weight: 600;
+        }
+
+        .history-type {
+            font-size: 0.75rem;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            font-weight: 600;
+        }
+
+        .history-fill {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .history-drain {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .history-content {
+            font-size: 0.875rem;
+            color: var(--text-color);
+        }
+
+        .route-line {
+            stroke: #2563eb;
+            stroke-width: 3;
+            stroke-dasharray: 5, 5;
+            fill: none;
+            animation: dash 20s linear infinite;
+        }
+
+        @keyframes dash {
+            to {
+                stroke-dashoffset: -100;
+            }
+        }
+
+        .distance-label {
+            background: white;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .tab-container {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+            border-bottom: 2px solid var(--background-color);
+        }
+
+        .tab {
+            padding: 0.75rem 1.5rem;
+            cursor: pointer;
+            border: none;
+            background: none;
+            color: #6b7280;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -2px;
+        }
+
+        .tab:hover {
+            color: var(--primary-color);
+        }
+
+        .tab.active {
+            color: var(--primary-color);
+            border-bottom-color: var(--primary-color);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        @media (max-width: 1024px) {
+            .dashboard {
+                grid-template-columns: 1fr;
+            }
+            
+            .sidebar, .details-panel {
+                display: none;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="dashboard" class="dashboard">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="logo">
+                ⚡ Pipeline Pro
+            </div>
+            
+            <div class="nav-section">
+                <div class="nav-section-title">Main</div>
+                <div class="nav-item active" onclick="showPage('devices', this)">
+                    <span class="nav-icon">🗺️</span>
+                    <span>Device Map</span>
+                </div>
+                <div class="nav-item" onclick="showPage('analytics', this)">
+                    <span class="nav-icon">📊</span>
+                    <span>Analytics</span>
+                </div>
+                <div class="nav-item" onclick="showPage('routes', this)">
+                    <span class="nav-icon">🛣️</span>
+                    <span>Routes & Distance</span>
+                </div>
+                <div class="nav-item" onclick="showPage('alerts', this)">
+                    <span class="nav-icon">🔔</span>
+                    <span>Alerts</span>
+                    <span class="badge badge-danger" id="alertCount">3</span>
+                </div>
+            </div>
+
+            <div class="nav-section">
+                <div class="nav-section-title">Settings</div>
+                <div class="nav-item" onclick="exportData()">
+                    <span class="nav-icon">💾</span>
+                    <span>Export Data</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Devices Page -->
+            <div id="devices-page">
+                <div class="header">
+                    <h1 class="header-title">Device Map</h1>
+                    <div class="header-actions">
+                        <button class="btn" onclick="openAddDeviceModal()">
+                            ➕ Add Device
+                        </button>
+                        <button class="btn btn-secondary" onclick="refreshDevices()">
+                            🔄 Refresh
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="search-container">
+                    <span class="search-icon">🔍</span>
+                    <input type="text" class="search-bar" placeholder="Search by ID, type, or location..." onkeyup="searchDevices(this.value)">
+                </div>
+
+                <div class="filter-bar">
+                    <div class="filter-chip active" data-filter="all" onclick="filterDevices('all')">All Devices</div>
+                    <div class="filter-chip" data-filter="tank" onclick="filterDevices('tank')">Tanks</div>
+                    <div class="filter-chip" data-filter="pipeline" onclick="filterDevices('pipeline')">Pipelines</div>
+                    <div class="filter-chip" data-filter="active" onclick="filterDevices('active')">Active</div>
+                    <div class="filter-chip" data-filter="offline" onclick="filterDevices('offline')">Offline</div>
+                </div>
+
+                <div id="map-container"></div>
+            </div>
+
+            <!-- Analytics Page -->
+            <div id="analytics-page" style="display: none;">
+                <div class="header">
+                    <h1 class="header-title">Analytics Dashboard</h1>
+                    <div class="header-actions">
+                        <button class="btn btn-secondary" onclick="refreshAnalytics()">
+                            🔄 Refresh Data
+                        </button>
+                    </div>
+                </div>
+
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon">💧</div>
+                        <div class="stat-value" id="totalCapacity">0</div>
+                        <div class="stat-label">Total Capacity (KL)</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">📊</div>
+                        <div class="stat-value" id="totalWater">0</div>
+                        <div class="stat-label">Current Water (KL)</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">📈</div>
+                        <div class="stat-value" id="avgFillLevel">0%</div>
+                        <div class="stat-label">Avg Fill Level</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">🔧</div>
+                        <div class="stat-value" id="activeDevices">0</div>
+                        <div class="stat-label">Active Devices</div>
+                    </div>
+                </div>
+
+                <div class="chart-container">
+                    <h3 class="chart-title">Water Level Trends (Last 30 Days)</h3>
+                    <canvas id="waterLevelChart"></canvas>
+                </div>
+
+                <div class="chart-container">
+                    <h3 class="chart-title">Pressure & Temperature Monitoring</h3>
+                    <canvas id="pressureTempChart"></canvas>
+                </div>
+
+                <div class="chart-container">
+                    <h3 class="chart-title">Tank Fill Distribution</h3>
+                    <canvas id="tankDistributionChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Routes Page -->
+            <div id="routes-page" style="display: none;">
+                <div class="header">
+                    <h1 class="header-title">Routes & Distance Calculator</h1>
+                    <div class="header-actions">
+                        <button class="btn" onclick="calculateAllRoutes()">
+                            🗺️ Calculate All Routes
+                        </button>
+                        <button class="btn btn-secondary" onclick="clearRoutes()">
+                            ✕ Clear Routes
+                        </button>
+                    </div>
+                </div>
+
+                <div class="detail-card" style="margin-bottom: 1rem;">
+                    <h3 style="margin-bottom: 1rem;">Select Devices for Route</h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>From Device</label>
+                            <select id="routeFrom" onchange="calculateRoute()">
+                                <option value="">Select device...</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>To Device</label>
+                            <select id="routeTo" onchange="calculateRoute()">
+                                <option value="">Select device...</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div id="routeResult" style="margin-top: 1rem;"></div>
+                </div>
+
+                <div id="routes-map-container" style="height: 500px; border-radius: 0.5rem; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);"></div>
+
+                <div class="chart-container" style="margin-top: 1rem;">
+                    <h3 class="chart-title">Distance Matrix (km)</h3>
+                    <div id="distanceMatrix" style="overflow-x: auto;"></div>
+                </div>
+            </div>
+
+            <!-- Alerts Page -->
+            <div id="alerts-page" style="display: none;">
+                <div class="header">
+                    <h1 class="header-title">System Alerts</h1>
+                    <div class="header-actions">
+                        <button class="btn btn-secondary" onclick="clearAllAlerts()">
+                            Clear All
+                        </button>
+                    </div>
+                </div>
+                <div id="alertsList"></div>
+            </div>
+        </div>
+
+        <!-- Details Panel -->
+        <div class="details-panel">
+            <div class="tab-container">
+                <button class="tab active" onclick="switchTab('details')">Details</button>
+                <button class="tab" onclick="switchTab('history')">History</button>
+                <button class="tab" onclick="switchTab('stats')">Stats</button>
+            </div>
+
+            <div id="tab-details" class="tab-content active">
+                <div class="device-details" id="deviceDetails">
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📍</div>
+                        <p>Select a device on the map to view details</p>
+                    </div>
+                </div>
+            </div>
+
+            <div id="tab-history" class="tab-content">
+                <div id="deviceHistory">
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📜</div>
+                        <p>No history available</p>
+                    </div>
+                </div>
+            </div>
+
+            <div id="tab-stats" class="tab-content">
+                <div id="deviceStats">
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📊</div>
+                        <p>No statistics available</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Device Modal -->
+    <div id="addDeviceModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Add New Device</h2>
+                <button class="close-btn" onclick="closeAddDeviceModal()">&times;</button>
+            </div>
+            <form id="addDeviceForm" onsubmit="handleAddDevice(event)">
+                <div class="form-group">
+                    <label for="deviceType">Device Type *</label>
+                    <select id="deviceType" required onchange="toggleDeviceFields()">
+                        <option value="">Select type...</option>
+                        <option value="tank">Water Tank</option>
+                        <option value="pipeline">Pipeline</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="deviceName">Device Name *</label>
+                    <input type="text" id="deviceName" required placeholder="e.g., Main Storage Tank">
+                </div>
+
+                <!-- Pipeline Specific Fields -->
+                <div id="pipelineFields" style="display: none;">
+                    <div class="form-group">
+                        <label for="pipelineName">Pipeline Name/Identifier *</label>
+                        <input type="text" id="pipelineName" placeholder="e.g., North-South Main Line">
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="pipelineLength">Length (km)</label>
+                            <input type="number" id="pipelineLength" step="0.1" min="0" placeholder="12.5">
+                        </div>
+                        <div class="form-group">
+                            <label for="pipelineDiameter">Diameter (mm)</label>
+                            <input type="number" id="pipelineDiameter" step="1" min="0" placeholder="600">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tank Specific Fields -->
+                <div id="tankFields" style="display: none;">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="tankCapacity">Capacity (Liters) *</label>
+                            <input type="number" id="tankCapacity" step="100" min="0" placeholder="5000">
+                        </div>
+                        <div class="form-group">
+                            <label for="tankWaterLevel">Water Level (Liters) *</label>
+                            <input type="number" id="tankWaterLevel" step="100" min="0" placeholder="3500">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="tankDiameter">Diameter (m)</label>
+                            <input type="number" id="tankDiameter" step="0.1" min="0" placeholder="3.5">
+                        </div>
+                        <div class="form-group">
+                            <label for="tankHeight">Height (m)</label>
+                            <input type="number" id="tankHeight" step="0.1" min="0" placeholder="4.2">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="location-section">
+                    <div class="section-title">📍 Location Coordinates</div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="deviceLatitude">Latitude *</label>
+                            <input type="number" id="deviceLatitude" step="0.0001" required placeholder="17.3850">
+                        </div>
+                        <div class="form-group">
+                            <label for="deviceLongitude">Longitude *</label>
+                            <input type="number" id="deviceLongitude" step="0.0001" required placeholder="78.4867">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="deviceAddress">Address</label>
+                        <input type="text" id="deviceAddress" placeholder="e.g., Gachibowli, Hyderabad">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="devicePressure">Pressure (MPa)</label>
+                        <input type="number" id="devicePressure" step="0.1" min="0" placeholder="2.4">
+                    </div>
+                    <div class="form-group">
+                        <label for="deviceTemperature">Temperature (°C)</label>
+                        <input type="number" id="deviceTemperature" step="0.1" placeholder="24">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="deviceNotes">Notes</label>
+                    <textarea id="deviceNotes" rows="3" placeholder="Additional notes..."></textarea>
+                </div>
+
+                <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
+                    <button type="button" class="btn btn-secondary" onclick="closeAddDeviceModal()">Cancel</button>
+                    <button type="submit" class="btn">Add Device</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit Device Modal -->
+    <div id="editDeviceModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Edit Device</h2>
+                <button class="close-btn" onclick="closeEditDeviceModal()">&times;</button>
+            </div>
+            <form id="editDeviceForm" onsubmit="handleEditDevice(event)">
+                <input type="hidden" id="editDeviceId">
+                
+                <div class="form-group">
+                    <label for="editDeviceName">Device Name *</label>
+                    <input type="text" id="editDeviceName" required>
+                </div>
+
+                <!-- Pipeline Edit Fields -->
+                <div id="editPipelineFields" style="display: none;">
+                    <div class="form-group">
+                        <label for="editPipelineName">Pipeline Name/Identifier *</label>
+                        <input type="text" id="editPipelineName">
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="editPipelineLength">Length (km)</label>
+                            <input type="number" id="editPipelineLength" step="0.1" min="0">
+                        </div>
+                        <div class="form-group">
+                            <label for="editPipelineDiameter">Diameter (mm)</label>
+                            <input type="number" id="editPipelineDiameter" step="1" min="0">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tank Edit Fields -->
+                <div id="editTankFields" style="display: none;">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="editTankCapacity">Capacity (Liters) *</label>
+                            <input type="number" id="editTankCapacity" step="100" min="0">
+                        </div>
+                        <div class="form-group">
+                            <label for="editTankWaterLevel">Water Level (Liters) *</label>
+                            <input type="number" id="editTankWaterLevel" step="100" min="0">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="location-section">
+                    <div class="section-title">📍 Location Coordinates</div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="editDeviceLatitude">Latitude *</label>
+                            <input type="number" id="editDeviceLatitude" step="0.0001" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="editDeviceLongitude">Longitude *</label>
+                            <input type="number" id="editDeviceLongitude" step="0.0001" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="editDeviceAddress">Address</label>
+                        <input type="text" id="editDeviceAddress">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="editDevicePressure">Pressure (MPa)</label>
+                        <input type="number" id="editDevicePressure" step="0.1" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label for="editDeviceTemperature">Temperature (°C)</label>
+                        <input type="number" id="editDeviceTemperature" step="0.1">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="editDeviceStatus">Status</label>
+                    <select id="editDeviceStatus" required>
+                        <option value="active">Active</option>
+                        <option value="offline">Offline</option>
+                        <option value="maintenance">Maintenance</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="editDeviceNotes">Notes</label>
+                    <textarea id="editDeviceNotes" rows="3"></textarea>
+                </div>
+
+                <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
+                    <button type="button" class="btn btn-secondary" onclick="closeEditDeviceModal()">Cancel</button>
+                    <button type="submit" class="btn">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Add Water Modal -->
+    <div id="addWaterModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Add Water to Tank</h2>
+                <button class="close-btn" onclick="closeAddWaterModal()">&times;</button>
+            </div>
+            <form onsubmit="handleAddWater(event)">
+                <input type="hidden" id="waterTankId">
+                <div class="form-group">
+                    <label for="waterAmount">Amount (Kiloliters)</label>
+                    <input type="number" id="waterAmount" step="0.1" min="0.1" required placeholder="Enter amount in KL">
+                </div>
+                <div class="form-group">
+                    <label for="waterNotes">Notes</label>
+                    <textarea id="waterNotes" rows="2" placeholder="Optional notes..."></textarea>
+                </div>
+                <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
+                    <button type="button" class="btn btn-secondary" onclick="closeAddWaterModal()">Cancel</button>
+                    <button type="submit" class="btn btn-success">Add Water</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast">
+        <span id="toastMessage"></span>
+    </div>
+
+    <script>
+        // Initialize maps
+let map, routesMap;
+let waterLevelChart, pressureTempChart, tankDistributionChart;
+const markers = new Map();
+const routeMarkers = new Map();
+const routeLines = [];
+let currentFilter = 'all';
+let currentDeviceId = null;
+
+// Device data with history
+let devices = [
+    {
+        id: 'TANK-001',
+        name: 'Hyderabad Main Storage',
+        type: 'tank',
+        latitude: 17.3850,
+        longitude: 78.4867,
+        status: 'active',
+        pressure: 2.4,
+        temperature: 24,
+        lastMaintenance: '2024-01-10',
+        address: 'Gachibowli, Hyderabad, Telangana 500032',
+        capacity: 5000,
+        waterLevel: 3500,
+        diameter: 3.5,
+        height: 4.2,
+        material: 'Stainless Steel',
+        notes: 'Primary storage tank',
+        history: [
+            { type: 'fill', amount: 1500, date: '2024-11-08T10:30:00', notes: 'Regular refill' },
+            { type: 'drain', amount: 800, date: '2024-11-07T14:20:00', notes: 'Supply to distribution' },
+            { type: 'fill', amount: 2000, date: '2024-11-06T09:15:00', notes: 'Morning refill' }
+        ]
+    },
+    {
+        id: 'PIPE-001',
+        name: 'Warangal Main Pipeline',
+        pipelineName: 'North-South Main Line',
+        type: 'pipeline',
+        latitude: 17.9689,
+        longitude: 79.5941,
+        status: 'active',
+        pressure: 1.8,
+        temperature: 22,
+        lastMaintenance: '2024-01-12',
+        address: 'Hanamkonda, Warangal, Telangana 506001',
+        length: 12.5,
+        diameter: 600,
+        material: 'Carbon Steel',
+        notes: 'Main pipeline section',
+        history: []
+    },
+    {
+        id: 'TANK-002',
+        name: 'Karimnagar Secondary Tank',
+        type: 'tank',
+        latitude: 18.4386,
+        longitude: 79.1288,
+        status: 'maintenance',
+        pressure: 0.5,
+        temperature: 20,
+        lastMaintenance: '2024-01-05',
+        address: 'Industrial Area, Karimnagar, Telangana 505001',
+        capacity: 3000,
+        waterLevel: 1200,
+        diameter: 2.8,
+        height: 3.5,
+        material: 'Stainless Steel',
+        notes: 'Scheduled maintenance',
+        history: [
+            { type: 'drain', amount: 500, date: '2024-11-05T16:00:00', notes: 'Maintenance preparation' },
+            { type: 'fill', amount: 1000, date: '2024-11-04T11:30:00', notes: 'Partial refill' }
+        ]
+    }
+];
+
+// Historical data for charts
+let historicalData = {
+    dates: [],
+    waterLevels: {}
+};
+
+// Initialize historical data
+function initHistoricalData() {
+    const dates = [];
+    for (let i = 29; i >= 0; i--) {
+        const date = new Date();
+        date.setDate(date.getDate() - i);
+        dates.push(date.toISOString().split('T')[0]);
+    }
+    historicalData.dates = dates;
+
+    devices.forEach(device => {
+        if (device.type === 'tank') {
+            historicalData.waterLevels[device.id] = dates.map(() => {
+                const variance = Math.random() * 0.3 - 0.15;
+                return Math.max(0, Math.min(device.capacity, device.waterLevel * (1 + variance)));
+            });
+        }
+    });
+}
+
+// Initialize main map
+function initializeMap() {
+    map = L.map('map-container').setView([17.9689, 79.5941], 8);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+
+    devices.forEach(device => {
+        const marker = createMarker(device);
+        markers.set(device.id, marker);
+    });
+}
+
+// Initialize routes map
+function initializeRoutesMap() {
+    if (routesMap) return;
+    
+    routesMap = L.map('routes-map-container').setView([17.9689, 79.5941], 8);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '© OpenStreetMap contributors'
+    }).addTo(routesMap);
+
+    devices.forEach(device => {
+        const color = device.type === 'tank' ? '#2563eb' : '#1e40af';
+        const icon = L.divIcon({
+            className: 'custom-marker-icon',
+            html: `<div style="background-color: ${color}; width: 30px; height: 30px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 8px rgba(0,0,0,0.3);"></div>`,
+            iconSize: [30, 30]
+        });
+
+        const marker = L.marker([device.latitude, device.longitude], { icon })
+            .addTo(routesMap)
+            .bindPopup(`<strong>${device.id}</strong><br>${device.name}`);
+        
+        routeMarkers.set(device.id, marker);
+    });
+
+    populateRouteSelects();
+}
+
+// Create marker
+function createMarker(device) {
+    const color = device.type === 'tank' ? '#2563eb' : '#1e40af';
+    const icon = L.divIcon({
+        className: 'custom-marker-icon',
+        html: `<div style="background-color: ${color}; width: 30px; height: 30px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 8px rgba(0,0,0,0.3);"></div>`,
+        iconSize: [30, 30]
+    });
+
+    const marker = L.marker([device.latitude, device.longitude], { icon })
+        .addTo(map)
+        .bindPopup(`
+            <div style="font-weight: 600; margin-bottom: 0.5rem;">${device.id}</div>
+            <div style="margin-bottom: 0.25rem;"><strong>Name:</strong> ${device.name}</div>
+            <div style="margin-bottom: 0.25rem;"><strong>Type:</strong> ${device.type}</div>
+            <div style="margin-bottom: 0.25rem;"><strong>Status:</strong> ${device.status}</div>
+            ${device.type === 'tank' ? `<div><strong>Water Level:</strong> ${(device.waterLevel/1000).toFixed(1)}/${(device.capacity/1000).toFixed(1)} KL</div>` : ''}
+            ${device.type === 'pipeline' && device.pipelineName ? `<div><strong>Pipeline:</strong> ${device.pipelineName}</div>` : ''}
+        `)
+        .on('click', () => {
+            showDeviceDetails(device);
+            currentDeviceId = device.id;
+        });
+
+    return marker;
+}
+
+// Calculate distance between two points (Haversine formula)
+function calculateDistance(lat1, lon1, lat2, lon2) {
+    const R = 6371; // Earth's radius in km
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+              Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+              Math.sin(dLon/2) * Math.sin(dLon/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c;
+}
+
+// Populate route select dropdowns
+function populateRouteSelects() {
+    const fromSelect = document.getElementById('routeFrom');
+    const toSelect = document.getElementById('routeTo');
+    
+    fromSelect.innerHTML = '<option value="">Select device...</option>';
+    toSelect.innerHTML = '<option value="">Select device...</option>';
+    
+    devices.forEach(device => {
+        fromSelect.innerHTML += `<option value="${device.id}">${device.id} - ${device.name}</option>`;
+        toSelect.innerHTML += `<option value="${device.id}">${device.id} - ${device.name}</option>`;
+    });
+}
+
+// Calculate route between two devices
+function calculateRoute() {
+    const fromId = document.getElementById('routeFrom').value;
+    const toId = document.getElementById('routeTo').value;
+    
+    if (!fromId || !toId) return;
+    if (fromId === toId) {
+        document.getElementById('routeResult').innerHTML = '<div style="color: var(--error-color);">Please select different devices</div>';
+        return;
+    }
+
+    const fromDevice = devices.find(d => d.id === fromId);
+    const toDevice = devices.find(d => d.id === toId);
+    
+    const distance = calculateDistance(
+        fromDevice.latitude, fromDevice.longitude,
+        toDevice.latitude, toDevice.longitude
+    );
+
+    clearRoutes();
+
+    const line = L.polyline([
+        [fromDevice.latitude, fromDevice.longitude],
+        [toDevice.latitude, toDevice.longitude]
+    ], {
+        color: '#2563eb',
+        weight: 4,
+        opacity: 0.7,
+        dashArray: '10, 10'
+    }).addTo(routesMap);
+
+    routeLines.push(line);
+
+    const midLat = (fromDevice.latitude + toDevice.latitude) / 2;
+    const midLon = (fromDevice.longitude + toDevice.longitude) / 2;
+    
+    const distanceMarker = L.marker([midLat, midLon], {
+        icon: L.divIcon({
+            className: 'distance-label',
+            html: `<div style="background: white; padding: 0.5rem; border-radius: 0.25rem; box-shadow: 0 2px 4px rgba(0,0,0,0.2); font-weight: 600;">${distance.toFixed(2)} km</div>`
+        })
+    }).addTo(routesMap);
+
+    routeLines.push(distanceMarker);
+
+    routesMap.fitBounds(line.getBounds(), { padding: [50, 50] });
+
+    document.getElementById('routeResult').innerHTML = `
+        <div style="background: #f0f9ff; padding: 1rem; border-radius: 0.5rem; border-left: 4px solid #0ea5e9;">
+            <div style="font-weight: 600; margin-bottom: 0.5rem;">Route Calculated</div>
+            <div><strong>From:</strong> ${fromDevice.name}</div>
+            <div><strong>To:</strong> ${toDevice.name}</div>
+            <div style="font-size: 1.25rem; font-weight: 700; color: var(--primary-color); margin-top: 0.5rem;">
+                Distance: ${distance.toFixed(2)} km
+            </div>
+        </div>
+    `;
+}
+
+// Calculate all routes
+function calculateAllRoutes() {
+    clearRoutes();
+    
+    for (let i = 0; i < devices.length; i++) {
+        for (let j = i + 1; j < devices.length; j++) {
+            const line = L.polyline([
+                [devices[i].latitude, devices[i].longitude],
+                [devices[j].latitude, devices[j].longitude]
+            ], {
+                color: '#94a3b8',
+                weight: 2,
+                opacity: 0.4,
+                dashArray: '5, 5'
+            }).addTo(routesMap);
+
+            routeLines.push(line);
+        }
+    }
+
+    generateDistanceMatrix();
+    showToast('All routes calculated', 'success');
+}
+
+// Clear routes
+function clearRoutes() {
+    routeLines.forEach(line => routesMap.removeLayer(line));
+    routeLines.length = 0;
+    document.getElementById('routeResult').innerHTML = '';
+}
+
+// Generate distance matrix
+function generateDistanceMatrix() {
+    let html = '<table style="width: 100%; border-collapse: collapse; font-size: 0.875rem;">';
+    html += '<tr><th style="padding: 0.5rem; border: 1px solid #e5e7eb; background: var(--background-color);"></th>';
+    
+    devices.forEach(device => {
+        html += `<th style="padding: 0.5rem; border: 1px solid #e5e7eb; background: var(--background-color); font-weight: 600;">${device.id}</th>`;
+    });
+    html += '</tr>';
+
+    devices.forEach((device1, i) => {
+        html += `<tr><td style="padding: 0.5rem; border: 1px solid #e5e7eb; background: var(--background-color); font-weight: 600;">${device1.id}</td>`;
+        devices.forEach((device2, j) => {
+            if (i === j) {
+                html += '<td style="padding: 0.5rem; border: 1px solid #e5e7eb; text-align: center; background: #f9fafb;">-</td>';
+            } else {
+                const distance = calculateDistance(
+                    device1.latitude, device1.longitude,
+                    device2.latitude, device2.longitude
+                );
+                html += `<td style="padding: 0.5rem; border: 1px solid #e5e7eb; text-align: center;">${distance.toFixed(1)}</td>`;
+            }
+        });
+        html += '</tr>';
+    });
+    html += '</table>';
+
+    document.getElementById('distanceMatrix').innerHTML = html;
+}
+
+// Switch tabs
+function switchTab(tabName) {
+    document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+    
+    event.target.classList.add('active');
+    document.getElementById(`tab-${tabName}`).classList.add('active');
+
+    if (tabName === 'history' && currentDeviceId) {
+        showDeviceHistory(currentDeviceId);
+    } else if (tabName === 'stats' && currentDeviceId) {
+        showDeviceStats(currentDeviceId);
+    }
+}
+
+// Show device details
+function showDeviceDetails(device) {
+    const detailsPanel = document.getElementById('deviceDetails');
+    const statusClass = device.status === 'active' ? 'status-active' : 
+                       device.status === 'offline' ? 'status-offline' : 'status-maintenance';
+    
+    let detailsHTML = `
+        <div class="detail-card">
+            <div class="detail-item">
+                <span class="detail-label">Device ID</span>
+                <span class="detail-value">${device.id}</span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">Name</span>
+                <span class="detail-value">${device.name}</span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">Type</span>
+                <span class="detail-value">${device.type.charAt(0).toUpperCase() + device.type.slice(1)}</span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">Status</span>
+                <span class="status-indicator ${statusClass}">${device.status}</span>
+            </div>
+        </div>`;
+
+    // Location Information
+    detailsHTML += `
+        <div class="detail-card">
+            <div class="section-title">📍 Location</div>
+            <div class="detail-item">
+                <span class="detail-label">Latitude</span>
+                <span class="detail-value coordinate-display">${device.latitude.toFixed(4)}°</span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">Longitude</span>
+                <span class="detail-value coordinate-display">${device.longitude.toFixed(4)}°</span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">Address</span>
+                <span class="detail-value" style="font-size: 0.8rem;">${device.address}</span>
+            </div>
+        </div>`;
+
+    // Tank-specific details
+    if (device.type === 'tank') {
+        const waterPercent = (device.waterLevel / device.capacity * 100).toFixed(1);
+        const waterKL = (device.waterLevel / 1000).toFixed(1);
+        const capacityKL = (device.capacity / 1000).toFixed(1);
+        
+        detailsHTML += `
+            <div class="detail-card">
+                <div class="section-title">💧 Water Tank Details</div>
+                <div class="water-level-indicator">
+                    <div class="water-level-fill" style="height: ${waterPercent}%;"></div>
+                    <div class="water-level-text">${waterPercent}%</div>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Water Level</span>
+                    <span class="detail-value">${waterKL} KL</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Total Capacity</span>
+                    <span class="detail-value">${capacityKL} KL</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Available</span>
+                    <span class="detail-value">${((device.capacity - device.waterLevel) / 1000).toFixed(1)} KL</span>
+                </div>
+                ${device.diameter ? `
+                <div class="detail-item">
+                    <span class="detail-label">Dimensions</span>
+                    <span class="detail-value">⌀ ${device.diameter}m × H ${device.height}m</span>
+                </div>` : ''}
+            </div>`;
+    }
+
+    // Pipeline-specific details
+    if (device.type === 'pipeline') {
+        detailsHTML += `
+            <div class="detail-card">
+                <div class="section-title">🔧 Pipeline Details</div>
+                ${device.pipelineName ? `
+                <div class="detail-item">
+                    <span class="detail-label">Pipeline Name</span>
+                    <span class="detail-value">${device.pipelineName}</span>
+                </div>` : ''}
+                ${device.length ? `
+                <div class="detail-item">
+                    <span class="detail-label">Length</span>
+                    <span class="detail-value">${device.length} km</span>
+                </div>` : ''}
+                ${device.diameter ? `
+                <div class="detail-item">
+                    <span class="detail-label">Diameter</span>
+                    <span class="detail-value">${device.diameter} mm</span>
+                </div>` : ''}
+                ${device.material ? `
+                <div class="detail-item">
+                    <span class="detail-label">Material</span>
+                    <span class="detail-value">${device.material}</span>
+                </div>` : ''}
+            </div>`;
+    }
+
+    // Operational data
+    detailsHTML += `
+        <div class="detail-card">
+            <div class="section-title">📊 Operational Data</div>
+            <div class="detail-item">
+                <span class="detail-label">Pressure</span>
+                <span class="detail-value">${device.pressure} MPa</span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">Temperature</span>
+                <span class="detail-value">${device.temperature}°C</span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">Last Maintenance</span>
+                <span class="detail-value">${device.lastMaintenance}</span>
+            </div>
+        </div>`;
+
+    // Notes
+    if (device.notes) {
+        detailsHTML += `
+            <div class="detail-card">
+                <div class="detail-label" style="margin-bottom: 0.5rem;">Notes</div>
+                <p style="color: var(--text-color); font-size: 0.875rem;">${device.notes}</p>
+            </div>`;
+    }
+
+    // Action buttons
+    detailsHTML += `
+        <div class="action-buttons">
+            ${device.type === 'tank' ? `
+            <button class="btn btn-success" onclick="openAddWaterModal('${device.id}')">💧 Add Water</button>
+            ` : ''}
+            <button class="btn" onclick="openEditDeviceModal('${device.id}')">✏️ Edit Device</button>
+            <button class="btn ${device.status === 'active' ? 'btn-secondary' : 'btn-success'}" onclick="toggleDeviceStatus('${device.id}')">
+                ${device.status === 'active' ? '⏸️ Deactivate' : '▶️ Activate'}
+            </button>
+            <button class="btn btn-danger" onclick="deleteDevice('${device.id}')">🗑️ Delete Device</button>
+        </div>`;
+
+    detailsPanel.innerHTML = detailsHTML;
+    map.setView([device.latitude, device.longitude], 12);
+}
+
+// Show device history
+function showDeviceHistory(deviceId) {
+    const device = devices.find(d => d.id === deviceId);
+    if (!device || !device.history || device.history.length === 0) {
+        document.getElementById('deviceHistory').innerHTML = `
+            <div class="empty-state">
+                <div class="empty-state-icon">📜</div>
+                <p>No history available</p>
+            </div>`;
+        return;
+    }
+
+    let historyHTML = '<h3 class="panel-header">Transaction History</h3>';
+    
+    const sortedHistory = [...device.history].sort((a, b) => new Date(b.date) - new Date(a.date));
+    
+    sortedHistory.forEach(entry => {
+        const date = new Date(entry.date);
+        const formattedDate = date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+        const formattedTime = date.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+        const amountKL = (entry.amount / 1000).toFixed(1);
+        
+        historyHTML += `
+            <div class="history-entry">
+                <div class="history-header">
+                    <span class="history-type ${entry.type === 'fill' ? 'history-fill' : 'history-drain'}">
+                        ${entry.type === 'fill' ? '▲ FILL' : '▼ DRAIN'}
+                    </span>
+                    <span class="history-time">${formattedDate} ${formattedTime}</span>
+                </div>
+                <div class="history-content">
+                    <div style="font-weight: 600; font-size: 1.125rem; margin-bottom: 0.25rem;">
+                        ${entry.type === 'fill' ? '+' : '-'}${amountKL} KL
+                    </div>
+                    ${entry.notes ? `<div style="color: #6b7280; font-size: 0.875rem;">${entry.notes}</div>` : ''}
+                </div>
+            </div>`;
+    });
+
+    document.getElementById('deviceHistory').innerHTML = historyHTML;
+}
+
+// Show device statistics
+function showDeviceStats(deviceId) {
+    const device = devices.find(d => d.id === deviceId);
+    if (!device) return;
+
+    let statsHTML = '<h3 class="panel-header">Statistics</h3>';
+
+    if (device.type === 'tank') {
+        const fillPercentage = (device.waterLevel / device.capacity * 100).toFixed(1);
+        const waterKL = (device.waterLevel / 1000).toFixed(1);
+        const capacityKL = (device.capacity / 1000).toFixed(1);
+        
+        // Calculate average from history
+        let totalFilled = 0;
+        let totalDrained = 0;
+        let fillCount = 0;
+        let drainCount = 0;
+        
+        if (device.history) {
+            device.history.forEach(entry => {
+                if (entry.type === 'fill') {
+                    totalFilled += entry.amount;
+                    fillCount++;
+                } else {
+                    totalDrained += entry.amount;
+                    drainCount++;
+                }
+            });
+        }
+
+        const avgFill = fillCount > 0 ? (totalFilled / fillCount / 1000).toFixed(1) : 0;
+        const avgDrain = drainCount > 0 ? (totalDrained / drainCount / 1000).toFixed(1) : 0;
+        const lastFillEntry = device.history?.find(h => h.type === 'fill');
+        const lastFillAmount = lastFillEntry ? (lastFillEntry.amount / 1000).toFixed(1) : 'N/A';
+        const lastFillDate = lastFillEntry ? new Date(lastFillEntry.date).toLocaleString('en-IN') : 'N/A';
+
+        statsHTML += `
+            <div class="detail-card">
+                <div class="section-title">💧 Current Status</div>
+                <div class="detail-item">
+                    <span class="detail-label">Fill Level</span>
+                    <span class="detail-value">${fillPercentage}%</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Current Water</span>
+                    <span class="detail-value">${waterKL} KL</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Total Capacity</span>
+                    <span class="detail-value">${capacityKL} KL</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Available Space</span>
+                    <span class="detail-value">${((device.capacity - device.waterLevel) / 1000).toFixed(1)} KL</span>
+                </div>
+            </div>
+
+            <div class="detail-card">
+                <div class="section-title">📈 Last Fill Information</div>
+                <div class="detail-item">
+                    <span class="detail-label">Amount</span>
+                    <span class="detail-value">${lastFillAmount} KL</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Date & Time</span>
+                    <span class="detail-value" style="font-size: 0.75rem;">${lastFillDate}</span>
+                </div>
+            </div>
+
+            <div class="detail-card">
+                <div class="section-title">📊 Historical Averages</div>
+                <div class="detail-item">
+                    <span class="detail-label">Avg Fill Amount</span>
+                    <span class="detail-value">${avgFill} KL</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Avg Drain Amount</span>
+                    <span class="detail-value">${avgDrain} KL</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Total Transactions</span>
+                    <span class="detail-value">${device.history?.length || 0}</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Fill Operations</span>
+                    <span class="detail-value">${fillCount}</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Drain Operations</span>
+                    <span class="detail-value">${drainCount}</span>
+                </div>
+            </div>
+
+            <div class="detail-card">
+                <div class="section-title">⚙️ Physical Specifications</div>
+                <div class="detail-item">
+                    <span class="detail-label">Diameter</span>
+                    <span class="detail-value">${device.diameter || 'N/A'} m</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Height</span>
+                    <span class="detail-value">${device.height || 'N/A'} m</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Material</span>
+                    <span class="detail-value">${device.material || 'N/A'}</span>
+                </div>
+            </div>`;
+    } else {
+        statsHTML += `
+            <div class="detail-card">
+                <div class="section-title">🔧 Pipeline Statistics</div>
+                <div class="detail-item">
+                    <span class="detail-label">Length</span>
+                    <span class="detail-value">${device.length || 'N/A'} km</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Diameter</span>
+                    <span class="detail-value">${device.diameter || 'N/A'} mm</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Material</span>
+                    <span class="detail-value">${device.material || 'N/A'}</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Current Pressure</span>
+                    <span class="detail-value">${device.pressure} MPa</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Temperature</span>
+                    <span class="detail-value">${device.temperature}°C</span>
+                </div>
+            </div>`;
+    }
+
+    document.getElementById('deviceStats').innerHTML = statsHTML;
+}
+
+// Initialize analytics
+function initializeAnalytics() {
+    updateAnalyticsStats();
+    createCharts();
+}
+
+// Update analytics statistics
+function updateAnalyticsStats() {
+    const tanks = devices.filter(d => d.type === 'tank');
+    const totalCapacity = tanks.reduce((sum, t) => sum + t.capacity, 0) / 1000;
+    const totalWater = tanks.reduce((sum, t) => sum + t.waterLevel, 0) / 1000;
+    const avgFillLevel = tanks.length > 0 ? (totalWater / totalCapacity * 100) : 0;
+    const activeDevices = devices.filter(d => d.status === 'active').length;
+
+    document.getElementById('totalCapacity').textContent = totalCapacity.toFixed(1);
+    document.getElementById('totalWater').textContent = totalWater.toFixed(1);
+    document.getElementById('avgFillLevel').textContent = avgFillLevel.toFixed(1) + '%';
+    document.getElementById('activeDevices').textContent = activeDevices;
+}
+
+// Create charts
+function createCharts() {
+    createWaterLevelChart();
+    createPressureTempChart();
+    createTankDistributionChart();
+}
+
+// Water level trend chart
+function createWaterLevelChart() {
+    const ctx = document.getElementById('waterLevelChart').getContext('2d');
+    
+    if (waterLevelChart) {
+        waterLevelChart.destroy();
+    }
+
+    const datasets = [];
+    const tanks = devices.filter(d => d.type === 'tank');
+    const colors = ['#2563eb', '#dc2626', '#059669', '#eab308'];
+
+    tanks.forEach((tank, index) => {
+        datasets.push({
+            label: tank.id,
+            data: historicalData.waterLevels[tank.id].map(v => (v / 1000).toFixed(1)),
+            borderColor: colors[index % colors.length],
+            backgroundColor: colors[index % colors.length] + '20',
+            tension: 0.4,
+            fill: true
+        });
+    });
+
+    waterLevelChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: historicalData.dates,
+            datasets: datasets
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: {
+                    position: 'top',
+                },
+                title: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Water Level (KL)'
+                    }
+                }
+            }
+        }
+    });
+}
+
+// Pressure and temperature chart
+function createPressureTempChart() {
+    const ctx = document.getElementById('pressureTempChart').getContext('2d');
+    
+    if (pressureTempChart) {
+        pressureTempChart.destroy();
+    }
+
+    const labels = devices.map(d => d.id);
+    const pressureData = devices.map(d => d.pressure);
+    const tempData = devices.map(d => d.temperature);
+
+    pressureTempChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'Pressure (MPa)',
+                    data: pressureData,
+                    backgroundColor: '#2563eb',
+                    yAxisID: 'y'
+                },
+                {
+                    label: 'Temperature (°C)',
+                    data: tempData,
+                    backgroundColor: '#dc2626',
+                    yAxisID: 'y1'
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: {
+                    position: 'top',
+                }
+            },
+            scales: {
+                y: {
+                    type: 'linear',
+                    display: true,
+                    position: 'left',
+                    title: {
+                        display: true,
+                        text: 'Pressure (MPa)'
+                    }
+                },
+                y1: {
+                    type: 'linear',
+                    display: true,
+                    position: 'right',
+                    title: {
+                        display: true,
+                        text: 'Temperature (°C)'
+                    },
+                    grid: {
+                        drawOnChartArea: false
+                    }
+                }
+            }
+        }
+    });
+}
+
+// Tank distribution chart
+function createTankDistributionChart() {
+    const ctx = document.getElementById('tankDistributionChart').getContext('2d');
+    
+    if (tankDistributionChart) {
+        tankDistributionChart.destroy();
+    }
+
+    const tanks = devices.filter(d => d.type === 'tank');
+    const labels = tanks.map(t => t.id);
+    const data = tanks.map(t => ((t.waterLevel / t.capacity) * 100).toFixed(1));
+    const colors = ['#2563eb', '#dc2626', '#059669', '#eab308'];
+
+    tankDistributionChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: labels,
+            datasets: [{
+                data: data,
+                backgroundColor: colors,
+                borderWidth: 2,
+                borderColor: '#fff'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: {
+                    position: 'right',
+                },
+                title: {
+                    display: false
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return context.label + ': ' + context.parsed + '%';
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+// Page navigation
+function showPage(pageName, element) {
+    document.querySelectorAll('.nav-item').forEach(item => {
+        item.classList.remove('active');
+    });
+    
+    if (element) {
+        const navItem = element.classList.contains('nav-item') ? element : element.closest('.nav-item');
+        if (navItem) {
+            navItem.classList.add('active');
+        }
+    }
+
+    const pages = ['devices', 'analytics', 'routes', 'alerts'];
+    pages.forEach(page => {
+        const pageEl = document.getElementById(`${page}-page`);
+        if (pageEl) {
+            pageEl.style.display = page === pageName ? 'block' : 'none';
+        }
+    });
+
+    if (pageName === 'analytics') {
+        setTimeout(() => {
+            initializeAnalytics();
+        }, 100);
+    } else if (pageName === 'routes') {
+        setTimeout(() => {
+            initializeRoutesMap();
+        }, 100);
+    }
+}
+
+// Toggle device type fields in add modal
+function toggleDeviceFields() {
+    const type = document.getElementById('deviceType').value;
+    const tankFields = document.getElementById('tankFields');
+    const pipelineFields = document.getElementById('pipelineFields');
+    
+    if (type === 'tank') {
+        tankFields.style.display = 'block';
+        pipelineFields.style.display = 'none';
+        document.getElementById('tankCapacity').required = true;
+        document.getElementById('tankWaterLevel').required = true;
+        document.getElementById('pipelineName').required = false;
+    } else if (type === 'pipeline') {
+        tankFields.style.display = 'none';
+        pipelineFields.style.display = 'block';
+        document.getElementById('tankCapacity').required = false;
+        document.getElementById('tankWaterLevel').required = false;
+        document.getElementById('pipelineName').required = true;
+    } else {
+        tankFields.style.display = 'none';
+        pipelineFields.style.display = 'none';
+    }
+}
+
+// Modal functions
+function openAddDeviceModal() {
+    document.getElementById('addDeviceModal').classList.add('show');
+}
+
+function closeAddDeviceModal() {
+    document.getElementById('addDeviceModal').classList.remove('show');
+    document.getElementById('addDeviceForm').reset();
+    document.getElementById('tankFields').style.display = 'none';
+    document.getElementById('pipelineFields').style.display = 'none';
+}
+
+function openEditDeviceModal(deviceId) {
+    const device = devices.find(d => d.id === deviceId);
+    if (!device) return;
+
+    document.getElementById('editDeviceId').value = device.id;
+    document.getElementById('editDeviceName').value = device.name;
+    document.getElementById('editDeviceLatitude').value = device.latitude;
+    document.getElementById('editDeviceLongitude').value = device.longitude;
+    document.getElementById('editDeviceAddress').value = device.address || '';
+    document.getElementById('editDevicePressure').value = device.pressure;
+    document.getElementById('editDeviceTemperature').value = device.temperature;
+    document.getElementById('editDeviceStatus').value = device.status;
+    document.getElementById('editDeviceNotes').value = device.notes || '';
+
+    const tankFields = document.getElementById('editTankFields');
+    const pipelineFields = document.getElementById('editPipelineFields');
+
+    if (device.type === 'tank') {
+        tankFields.style.display = 'block';
+        pipelineFields.style.display = 'none';
+        document.getElementById('editTankCapacity').value = device.capacity;
+        document.getElementById('editTankWaterLevel').value = device.waterLevel;
+    } else if (device.type === 'pipeline') {
+        tankFields.style.display = 'none';
+        pipelineFields.style.display = 'block';
+        document.getElementById('editPipelineName').value = device.pipelineName || '';
+        document.getElementById('editPipelineLength').value = device.length || '';
+        document.getElementById('editPipelineDiameter').value = device.diameter || '';
+    }
+
+    document.getElementById('editDeviceModal').classList.add('show');
+}
+
+function closeEditDeviceModal() {
+    document.getElementById('editDeviceModal').classList.remove('show');
+}
+
+function openAddWaterModal(deviceId) {
+    document.getElementById('waterTankId').value = deviceId;
+    document.getElementById('addWaterModal').classList.add('show');
+}
+
+function closeAddWaterModal() {
+    document.getElementById('addWaterModal').classList.remove('show');
+    document.getElementById('waterAmount').value = '';
+    document.getElementById('waterNotes').value = '';
+}
+
+// Handle add water
+function handleAddWater(event) {
+    event.preventDefault();
+    
+    const deviceId = document.getElementById('waterTankId').value;
+    const amountKL = parseFloat(document.getElementById('waterAmount').value);
+    const notes = document.getElementById('waterNotes').value;
+    
+    const device = devices.find(d => d.id === deviceId);
+    if (!device || device.type !== 'tank') return;
+
+    const amountLiters = amountKL * 1000;
+    const newLevel = Math.min(device.capacity, device.waterLevel + amountLiters);
+    const actualAdded = newLevel - device.waterLevel;
+
+    if (!device.history) {
+        device.history = [];
+    }
+
+    device.history.unshift({
+        type: 'fill',
+        amount: actualAdded,
+        date: new Date().toISOString(),
+        notes: notes || 'Water added via interface'
+    });
+
+    device.waterLevel = newLevel;
+
+    const marker = markers.get(deviceId);
+    if (marker) {
+        map.removeLayer(marker);
+        const newMarker = createMarker(device);
+        markers.set(deviceId, newMarker);
+    }
+
+    showDeviceDetails(device);
+    closeAddWaterModal();
+    showToast(`Added ${(actualAdded/1000).toFixed(1)} KL to ${deviceId}`, 'success');
+
+    if (actualAdded < amountLiters) {
+        showToast(`Tank capacity reached. Only ${(actualAdded/1000).toFixed(1)} KL added.`, 'warning');
+    }
+}
+
+// Handle adding new device
+function handleAddDevice(event) {
+    event.preventDefault();
+    
+    const type = document.getElementById('deviceType').value;
+    const name = document.getElementById('deviceName').value;
+    const latitude = parseFloat(document.getElementById('deviceLatitude').value);
+    const longitude = parseFloat(document.getElementById('deviceLongitude').value);
+    const address = document.getElementById('deviceAddress').value;
+    const pressure = parseFloat(document.getElementById('devicePressure').value) || 0;
+    const temperature = parseFloat(document.getElementById('deviceTemperature').value) || 20;
+    const notes = document.getElementById('deviceNotes').value;
+    
+    const newDevice = {
+        id: `${type.toUpperCase()}-${String(devices.filter(d => d.type === type).length + 1).padStart(3, '0')}`,
+        name: name,
+        type: type,
+        latitude: latitude,
+        longitude: longitude,
+        status: 'active',
+        pressure: pressure,
+        temperature: temperature,
+        lastMaintenance: new Date().toISOString().split('T')[0],
+        address: address,
+        notes: notes,
+        history: []
+    };
+
+    if (type === 'tank') {
+        newDevice.capacity = parseInt(document.getElementById('tankCapacity').value);
+        newDevice.waterLevel = parseInt(document.getElementById('tankWaterLevel').value);
+        newDevice.diameter = parseFloat(document.getElementById('tankDiameter').value) || 0;
+        newDevice.height = parseFloat(document.getElementById('tankHeight').value) || 0;
+        newDevice.material = 'Stainless Steel';
+    } else if (type === 'pipeline') {
+        newDevice.pipelineName = document.getElementById('pipelineName').value;
+        newDevice.length = parseFloat(document.getElementById('pipelineLength').value) || 0;
+        newDevice.diameter = parseFloat(document.getElementById('pipelineDiameter').value) || 0;
+        newDevice.material = 'Carbon Steel';
+    }
+    
+    devices.push(newDevice);
+    const marker = createMarker(newDevice);
+    markers.set(newDevice.id, marker);
+    
+    if (type === 'tank') {
+        historicalData.waterLevels[newDevice.id] = historicalData.dates.map(() => newDevice.waterLevel);
+    }
+    
+    showDeviceDetails(newDevice);
+    currentDeviceId = newDevice.id;
+    closeAddDeviceModal();
+    showToast(`Device ${newDevice.id} added successfully`, 'success');
+    
+    populateRouteSelects();
+}
+
+// Handle editing device
+function handleEditDevice(event) {
+    event.preventDefault();
+    
+    const deviceId = document.getElementById('editDeviceId').value;
+    const device = devices.find(d => d.id === deviceId);
+    
+    if (device) {
+        const oldWaterLevel = device.waterLevel;
+        
+        device.name = document.getElementById('editDeviceName').value;
+        device.latitude = parseFloat(document.getElementById('editDeviceLatitude').value);
+        device.longitude = parseFloat(document.getElementById('editDeviceLongitude').value);
+        device.address = document.getElementById('editDeviceAddress').value;
+        device.pressure = parseFloat(document.getElementById('editDevicePressure').value);
+        device.temperature = parseFloat(document.getElementById('editDeviceTemperature').value);
+        device.status = document.getElementById('editDeviceStatus').value;
+        device.notes = document.getElementById('editDeviceNotes').value;
+
+        if (device.type === 'tank') {
+            device.capacity = parseInt(document.getElementById('editTankCapacity').value);
+            device.waterLevel = parseInt(document.getElementById('editTankWaterLevel').value);
+            
+            if (oldWaterLevel !== device.waterLevel) {
+                const diff = device.waterLevel - oldWaterLevel;
+                if (!device.history) device.history = [];
+                device.history.unshift({
+                    type: diff > 0 ? 'fill' : 'drain',
+                    amount: Math.abs(diff),
+                    date: new Date().toISOString(),
+                    notes: 'Manual adjustment via edit'
+                });
+            }
+        } else if (device.type === 'pipeline') {
+            device.pipelineName = document.getElementById('editPipelineName').value;
+            device.length = parseFloat(document.getElementById('editPipelineLength').value);
+            device.diameter = parseFloat(document.getElementById('editPipelineDiameter').value);
+        }
+        
+        const marker = markers.get(deviceId);
+        if (marker) {
+            map.removeLayer(marker);
+            const newMarker = createMarker(device);
+            markers.set(deviceId, newMarker);
+        }
+        
+        showDeviceDetails(device);
+        closeEditDeviceModal();
+        showToast(`Device ${deviceId} updated successfully`, 'success');
+    }
+}
+
+// Toggle device status
+function toggleDeviceStatus(deviceId) {
+    const device = devices.find(d => d.id === deviceId);
+    if (device) {
+        const newStatus = device.status === 'active' ? 'offline' : 'active';
+        device.status = newStatus;
+        
+        const marker = markers.get(deviceId);
+        if (marker) {
+            map.removeLayer(marker);
+            const newMarker = createMarker(device);
+            markers.set(deviceId, newMarker);
+        }
+        
+        showDeviceDetails(device);
+        showToast(`Device ${deviceId} ${newStatus === 'active' ? 'activated' : 'deactivated'}`, 'success');
+    }
+}
+
+// Delete device
+function deleteDevice(deviceId) {
+    if (!confirm(`Are you sure you want to delete ${deviceId}?`)) return;
+    
+    const index = devices.findIndex(d => d.id === deviceId);
+    if (index !== -1) {
+        devices.splice(index, 1);
+        const marker = markers.get(deviceId);
+        if (marker) {
+            map.removeLayer(marker);
+            markers.delete(deviceId);
+        }
+        
+        delete historicalData.waterLevels[deviceId];
+        
+        document.getElementById('deviceDetails').innerHTML = `
+            <div class="empty-state">
+                <div class="empty-state-icon">📍</div>
+                <p>Select a device on the map to view details</p>
+            </div>
+        `;
+        
+        currentDeviceId = null;
+        showToast(`Device ${deviceId} deleted`, 'success');
+        populateRouteSelects();
+    }
+}
+
+// Search devices
+function searchDevices(query) {
+    query = query.toLowerCase();
+    devices.forEach(device => {
+        const marker = markers.get(device.id);
+        const matches = device.id.toLowerCase().includes(query) || 
+                       device.name.toLowerCase().includes(query) ||
+                       device.type.toLowerCase().includes(query) ||
+                       (device.address && device.address.toLowerCase().includes(query)) ||
+                       (device.pipelineName && device.pipelineName.toLowerCase().includes(query));
+        
+        if (marker) {
+            const element = marker.getElement();
+            if (element) {
+                element.style.display = matches ? 'block' : 'none';
+            }
+        }
+    });
+}
+
+// Filter devices
+function filterDevices(filter) {
+    currentFilter = filter;
+    
+    document.querySelectorAll('.filter-chip').forEach(chip => {
+        chip.classList.remove('active');
+        if (chip.dataset.filter === filter) {
+            chip.classList.add('active');
+        }
+    });
+
+    devices.forEach(device => {
+        const marker = markers.get(device.id);
+        let show = false;
+
+        if (filter === 'all') {
+            show = true;
+        } else if (filter === 'tank' || filter === 'pipeline') {
+            show = device.type === filter;
+        } else if (filter === 'active' || filter === 'offline' || filter === 'maintenance') {
+            show = device.status === filter;
+        }
+
+        if (marker) {
+            const element = marker.getElement();
+            if (element) {
+                element.style.display = show ? 'block' : 'none';
+            }
+        }
+    });
+}
+
+// Clear all alerts
+function clearAllAlerts() {
+    document.getElementById('alertsList').innerHTML = `
+        <div class="empty-state">
+            <div class="empty-state-icon">✅</div>
+            <p>No active alerts</p>
+        </div>
+    `;
+    document.getElementById('alertCount').textContent = '0';
+    showToast('All alerts cleared', 'success');
+}
+
+// Show toast notification
+function showToast(message, type = 'success') {
+    const toast = document.getElementById('toast');
+    const toastMessage = document.getElementById('toastMessage');
+    
+    toast.className = `toast ${type} show`;
+    toastMessage.textContent = message;
+    
+    setTimeout(() => {
+        toast.classList.remove('show');
+    }, 3000);
+}
+
+// Refresh devices
+function refreshDevices() {
+    devices.forEach(device => {
+        if (device.type === 'tank' && Math.random() > 0.5) {
+            const change = (Math.random() * 200 - 100);
+            device.waterLevel = Math.max(0, Math.min(device.capacity, device.waterLevel + change));
+        }
+        
+        device.pressure = Math.max(0, device.pressure + (Math.random() * 0.4 - 0.2));
+        device.temperature = Math.max(15, Math.min(35, device.temperature + (Math.random() * 2 - 1)));
+    });
+
+    markers.forEach((marker, id) => {
+        map.removeLayer(marker);
+        const device = devices.find(d => d.id === id);
+        if (device) {
+            const newMarker = createMarker(device);
+            markers.set(id, newMarker);
+        }
+    });
+
+    if (currentDeviceId) {
+        const device = devices.find(d => d.id === currentDeviceId);
+        if (device) {
+            showDeviceDetails(device);
+        }
+    }
+
+    showToast('Devices refreshed', 'success');
+}
+
+// Refresh analytics
+function refreshAnalytics() {
+    updateAnalyticsStats();
+    createCharts();
+    showToast('Analytics refreshed', 'success');
+}
+
+// Export data
+function exportData() {
+    const data = {
+        devices,
+        historicalData,
+        exportDate: new Date().toISOString(),
+        summary: {
+            totalDevices: devices.length,
+            tanks: devices.filter(d => d.type === 'tank').length,
+            pipelines: devices.filter(d => d.type === 'pipeline').length,
+            activeDevices: devices.filter(d => d.status === 'active').length
+        }
+    };
+    
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `pipeline-data-${new Date().toISOString().split('T')[0]}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    
+    showToast('Data exported successfully', 'success');
+}
+
+// Initialize alerts
+function initializeAlerts() {
+    const alerts = [
+        {
+            id: 1,
+            type: 'warning',
+            device: 'TANK-002',
+            message: 'Low water level detected - 40% capacity',
+            time: '2 hours ago'
+        },
+        {
+            id: 2,
+            type: 'error',
+            device: 'TANK-002',
+            message: 'Device in maintenance mode',
+            time: '5 hours ago'
+        },
+        {
+            id: 3,
+            type: 'info',
+            device: 'PIPE-001',
+            message: 'Pressure fluctuation detected',
+            time: '1 day ago'
+        }
+    ];
+
+    let alertsHTML = '';
+    alerts.forEach(alert => {
+        const bgColor = alert.type === 'error' ? '#fee2e2' : 
+                       alert.type === 'warning' ? '#fef3c7' : '#dbeafe';
+        const textColor = alert.type === 'error' ? '#991b1b' : 
+                         alert.type === 'warning' ? '#92400e' : '#1e40af';
+        
+        alertsHTML += `
+            <div style="background: ${bgColor}; padding: 1rem; border-radius: 0.5rem; border-left: 4px solid ${textColor}; margin-bottom: 1rem;">
+                <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 0.5rem;">
+                    <span style="font-weight: 600; text-transform: uppercase; font-size: 0.75rem; color: ${textColor};">
+                        ${alert.type}
+                    </span>
+                    <span style="font-size: 0.75rem; color: #6b7280;">${alert.time}</span>
+                </div>
+                <div style="font-weight: 600; margin-bottom: 0.25rem;">${alert.device}</div>
+                <div style="font-size: 0.875rem; color: var(--text-color);">${alert.message}</div>
+            </div>
+        `;
+    });
+
+    document.getElementById('alertsList').innerHTML = alertsHTML;
+}
+
+// Close modal on outside click
+window.onclick = function(event) {
+    if (event.target.classList.contains('modal')) {
+        event.target.classList.remove('show');
+    }
+}
+
+// Initialize application
+window.onload = function() {
+    initHistoricalData();
+    initializeMap();
+    initializeAlerts();
+    showPage('devices');
+    
+    // Simulate real-time updates every 5 seconds
+    setInterval(() => {
+        devices.forEach(device => {
+            if (device.type === 'tank') {
+                const change = (Math.random() * 50 - 25);
+                device.waterLevel = Math.max(0, Math.min(device.capacity, device.waterLevel + change));
+                
+                if (historicalData.waterLevels[device.id]) {
+                    historicalData.waterLevels[device.id].shift();
+                    historicalData.waterLevels[device.id].push(device.waterLevel);
+                }
+            }
+            
+            device.pressure = Math.max(0, device.pressure + (Math.random() * 0.1 - 0.05));
+            device.temperature = Math.max(15, Math.min(35, device.temperature + (Math.random() * 0.5 - 0.25)));
+        });
+
+        if (currentDeviceId) {
+            const device = devices.find(d => d.id === currentDeviceId);
+            if (device) {
+                const activeTab = document.querySelector('.tab.active');
+                if (activeTab && activeTab.textContent.trim() === 'Details') {
+                    showDeviceDetails(device);
+                } else if (activeTab && activeTab.textContent.trim() === 'Stats') {
+                    showDeviceStats(currentDeviceId);
+                }
+            }
+        }
+    }, 5000);
+};
+
+</script>
+</body>
+</html>
